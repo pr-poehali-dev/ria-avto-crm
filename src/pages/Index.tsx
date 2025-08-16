@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,40 +21,68 @@ const Index = () => {
 
   const [sovcomData, setSovcomData] = useState({
     carPrice: 0,
+    interestRate: 10.25,
+    creditTerm: 60,
+    downPayment: 0,
+    lifeInsurance: 301250,
+    kasko: 473250,
+    helpCard: 287450,
     monthlyPayment: 0,
     totalCredit: 0
   });
 
   const [vtbData, setVtbData] = useState({
     creditLimit: 0,
+    interestRate: 11.65,
+    creditTerm: 98,
+    downPayment: 0,
+    lifeInsurance: 62250,
+    kasko: 0,
+    helpCard: 0,
     monthlyPayment: 0,
     totalCredit: 0
   });
 
   // Автоматический расчет для Совкомбанка
-  const calculateSovcom = (price: number) => {
-    const lifeInsurance = 301250;
-    const kasko = 473250;
-    const helpCard = 287450;
-    const totalCredit = price + lifeInsurance + kasko + helpCard;
+  const calculateSovcom = (data: typeof sovcomData) => {
+    const totalInsurance = data.lifeInsurance + data.kasko + data.helpCard;
+    const creditAmount = data.carPrice - data.downPayment + totalInsurance;
+    const monthlyRate = data.interestRate / 100 / 12;
+    const monthlyPayment = creditAmount > 0 && data.creditTerm > 0 ? 
+      creditAmount * (monthlyRate * Math.pow(1 + monthlyRate, data.creditTerm)) / (Math.pow(1 + monthlyRate, data.creditTerm) - 1) : 0;
     
-    setSovcomData({
-      carPrice: price,
-      totalCredit: totalCredit,
-      monthlyPayment: 0 // пользователь вводит вручную
-    });
+    return {
+      ...data,
+      totalCredit: creditAmount,
+      monthlyPayment: isNaN(monthlyPayment) ? 0 : Math.round(monthlyPayment)
+    };
   };
 
   // Автоматический расчет для ВТБ
-  const calculateVTB = (limit: number) => {
-    const lifeInsurance = 62250;
-    const totalCredit = limit + lifeInsurance;
+  const calculateVTB = (data: typeof vtbData) => {
+    const totalInsurance = data.lifeInsurance + data.kasko + data.helpCard;
+    const creditAmount = data.creditLimit - data.downPayment + totalInsurance;
+    const monthlyRate = data.interestRate / 100 / 12;
+    const monthlyPayment = creditAmount > 0 && data.creditTerm > 0 ? 
+      creditAmount * (monthlyRate * Math.pow(1 + monthlyRate, data.creditTerm)) / (Math.pow(1 + monthlyRate, data.creditTerm) - 1) : 0;
     
-    setVtbData({
-      creditLimit: limit,
-      totalCredit: totalCredit,
-      monthlyPayment: 0 // пользователь вводит вручную
-    });
+    return {
+      ...data,
+      totalCredit: creditAmount,
+      monthlyPayment: isNaN(monthlyPayment) ? 0 : Math.round(monthlyPayment)
+    };
+  };
+
+  // Обновление Совкомбанк при изменении полей
+  const updateSovcomField = (field: string, value: number) => {
+    const newData = { ...sovcomData, [field]: value };
+    setSovcomData(calculateSovcom(newData));
+  };
+
+  // Обновление ВТБ при изменении полей
+  const updateVTBField = (field: string, value: number) => {
+    const newData = { ...vtbData, [field]: value };
+    setVtbData(calculateVTB(newData));
   };
 
   return (
@@ -140,83 +168,104 @@ const Index = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-sm text-slate-600 mb-2">Реализация банковских Б/У автомобилей</p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Процентная ставка:</span>
-                        <span className="font-semibold">10,25%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Срок кредита:</span>
-                        <span className="font-semibold">60 месяцев</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Первоначальный взнос:</span>
-                        <span className="font-semibold">0,00 руб</span>
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="sovcom-rate">Процентная ставка (%)</Label>
+                      <Input
+                        id="sovcom-rate"
+                        type="number"
+                        step="0.01"
+                        value={sovcomData.interestRate}
+                        onChange={(e) => updateSovcomField('interestRate', Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="sovcom-term">Срок кредита (мес)</Label>
+                      <Input
+                        id="sovcom-term"
+                        type="number"
+                        value={sovcomData.creditTerm}
+                        onChange={(e) => updateSovcomField('creditTerm', Number(e.target.value))}
+                      />
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="sovcom-car">Автомобиль и год</Label>
-                    <Input
-                      id="sovcom-car"
-                      placeholder="Модель и год автомобиля"
-                      value={clientData.carModel}
-                      onChange={(e) => setClientData({...clientData, carModel: e.target.value})}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="sovcom-price">Стоимость автомобиля (руб)</Label>
-                    <Input
-                      id="sovcom-price"
-                      type="number"
-                      placeholder="0"
-                      value={clientData.carPrice || ''}
-                      onChange={(e) => {
-                        const price = Number(e.target.value);
-                        setClientData({...clientData, carPrice: price});
-                        calculateSovcom(price);
-                      }}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="sovcom-car-price">Стоимость автомобиля (руб)</Label>
+                      <Input
+                        id="sovcom-car-price"
+                        type="number"
+                        value={sovcomData.carPrice || ''}
+                        onChange={(e) => updateSovcomField('carPrice', Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="sovcom-down">Первоначальный взнос (руб)</Label>
+                      <Input
+                        id="sovcom-down"
+                        type="number"
+                        value={sovcomData.downPayment || ''}
+                        onChange={(e) => updateSovcomField('downPayment', Number(e.target.value))}
+                      />
+                    </div>
                   </div>
 
                   <Separator />
 
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-sm">Обязательные страховые продукты:</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Страхование жизни (5 лет):</span>
-                        <span className="font-medium">301 250 руб</span>
+                    <h4 className="font-semibold text-sm">Страховые продукты (редактируемые):</h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <Label htmlFor="sovcom-life">Страхование жизни (руб)</Label>
+                        <Input
+                          id="sovcom-life"
+                          type="number"
+                          value={sovcomData.lifeInsurance}
+                          onChange={(e) => updateSovcomField('lifeInsurance', Number(e.target.value))}
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span>КАСКО (5 лет):</span>
-                        <span className="font-medium">473 250 руб</span>
+                      <div>
+                        <Label htmlFor="sovcom-kasko">КАСКО (руб)</Label>
+                        <Input
+                          id="sovcom-kasko"
+                          type="number"
+                          value={sovcomData.kasko}
+                          onChange={(e) => updateSovcomField('kasko', Number(e.target.value))}
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span>Карта помощи РАТ (5 лет):</span>
-                        <span className="font-medium">287 450 руб</span>
+                      <div>
+                        <Label htmlFor="sovcom-help">Карта помощи РАТ (руб)</Label>
+                        <Input
+                          id="sovcom-help"
+                          type="number"
+                          value={sovcomData.helpCard}
+                          onChange={(e) => updateSovcomField('helpCard', Number(e.target.value))}
+                        />
                       </div>
                     </div>
                   </div>
 
                   <Separator />
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Сумма кредита:</span>
-                      <span className="font-bold text-lg">{sovcomData.totalCredit.toLocaleString()} руб</span>
+                  <div className="space-y-3">
+                    <div className="bg-slate-100 p-3 rounded-lg">
+                      <div className="flex justify-between mb-2">
+                        <span className="font-semibold">Сумма кредита:</span>
+                        <span className="font-bold text-lg">{sovcomData.totalCredit.toLocaleString()} руб</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Автоматический платеж:</span>
+                        <span className="font-bold text-lg">{sovcomData.monthlyPayment.toLocaleString()} руб</span>
+                      </div>
                     </div>
+                    
                     <div>
-                      <Label htmlFor="sovcom-payment">Ежемесячный платеж (руб)</Label>
+                      <Label htmlFor="sovcom-manual-payment">Ручная корректировка платежа (руб)</Label>
                       <Input
-                        id="sovcom-payment"
+                        id="sovcom-manual-payment"
                         type="number"
-                        placeholder="Введите вручную"
-                        value={sovcomData.monthlyPayment || ''}
+                        placeholder="Введите для корректировки"
                         onChange={(e) => setSovcomData({...sovcomData, monthlyPayment: Number(e.target.value)})}
                       />
                     </div>
@@ -243,83 +292,104 @@ const Index = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-sm text-slate-600 mb-2">Льготное автокредитование дилерских авто</p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Процентная ставка:</span>
-                        <span className="font-semibold">17,75% → 11,65%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Срок кредита:</span>
-                        <span className="font-semibold">до 98 месяцев</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Первоначальный взнос:</span>
-                        <span className="font-semibold">0,00 руб</span>
-                      </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="vtb-rate">Процентная ставка (%)</Label>
+                      <Input
+                        id="vtb-rate"
+                        type="number"
+                        step="0.01"
+                        value={vtbData.interestRate}
+                        onChange={(e) => updateVTBField('interestRate', Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="vtb-term">Срок кредита (мес)</Label>
+                      <Input
+                        id="vtb-term"
+                        type="number"
+                        value={vtbData.creditTerm}
+                        onChange={(e) => updateVTBField('creditTerm', Number(e.target.value))}
+                      />
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="vtb-limit">Одобренный кредитный лимит (руб)</Label>
-                    <Input
-                      id="vtb-limit"
-                      type="number"
-                      placeholder="0"
-                      value={clientData.creditLimit || ''}
-                      onChange={(e) => {
-                        const limit = Number(e.target.value);
-                        setClientData({...clientData, creditLimit: limit});
-                        calculateVTB(limit);
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="vtb-client">Клиент (синхронизировано)</Label>
-                    <Input
-                      id="vtb-client"
-                      value={clientData.clientName}
-                      readOnly
-                      className="bg-slate-100"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="vtb-limit">Кредитный лимит (руб)</Label>
+                      <Input
+                        id="vtb-limit"
+                        type="number"
+                        value={vtbData.creditLimit || ''}
+                        onChange={(e) => updateVTBField('creditLimit', Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="vtb-down">Первоначальный взнос (руб)</Label>
+                      <Input
+                        id="vtb-down"
+                        type="number"
+                        value={vtbData.downPayment || ''}
+                        onChange={(e) => updateVTBField('downPayment', Number(e.target.value))}
+                      />
+                    </div>
                   </div>
 
                   <Separator />
 
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-sm">Дополнительные продукты:</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Страхование жизни (добровольное):</span>
-                        <span className="font-medium">62 250 руб</span>
+                    <h4 className="font-semibold text-sm">Дополнительные продукты (редактируемые):</h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <Label htmlFor="vtb-life">Страхование жизни (руб)</Label>
+                        <Input
+                          id="vtb-life"
+                          type="number"
+                          value={vtbData.lifeInsurance}
+                          onChange={(e) => updateVTBField('lifeInsurance', Number(e.target.value))}
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span>КАСКО:</span>
-                        <span className="font-medium">0 руб</span>
+                      <div>
+                        <Label htmlFor="vtb-kasko">КАСКО (руб)</Label>
+                        <Input
+                          id="vtb-kasko"
+                          type="number"
+                          value={vtbData.kasko}
+                          onChange={(e) => updateVTBField('kasko', Number(e.target.value))}
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span>Карта помощи РАТ:</span>
-                        <span className="font-medium">0 руб</span>
+                      <div>
+                        <Label htmlFor="vtb-help">Карта помощи РАТ (руб)</Label>
+                        <Input
+                          id="vtb-help"
+                          type="number"
+                          value={vtbData.helpCard}
+                          onChange={(e) => updateVTBField('helpCard', Number(e.target.value))}
+                        />
                       </div>
                     </div>
                   </div>
 
                   <Separator />
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Сумма кредита:</span>
-                      <span className="font-bold text-lg">{vtbData.totalCredit.toLocaleString()} руб</span>
+                  <div className="space-y-3">
+                    <div className="bg-slate-100 p-3 rounded-lg">
+                      <div className="flex justify-between mb-2">
+                        <span className="font-semibold">Сумма кредита:</span>
+                        <span className="font-bold text-lg">{vtbData.totalCredit.toLocaleString()} руб</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Автоматический платеж:</span>
+                        <span className="font-bold text-lg">{vtbData.monthlyPayment.toLocaleString()} руб</span>
+                      </div>
                     </div>
+                    
                     <div>
-                      <Label htmlFor="vtb-payment">Ежемесячный платеж (руб)</Label>
+                      <Label htmlFor="vtb-manual-payment">Ручная корректировка платежа (руб)</Label>
                       <Input
-                        id="vtb-payment"
+                        id="vtb-manual-payment"
                         type="number"
-                        placeholder="Введите вручную"
-                        value={vtbData.monthlyPayment || ''}
+                        placeholder="Введите для корректировки"
                         onChange={(e) => setVtbData({...vtbData, monthlyPayment: Number(e.target.value)})}
                       />
                     </div>
@@ -331,16 +401,6 @@ const Index = () => {
                       Досрочное погашение доступно без штрафов
                     </p>
                   </div>
-
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold text-xs text-blue-900 mb-1">Подарки от автосалона:</h4>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Первое ТО в подарок</li>
-                      <li>• Диагностика автомобиля в подарок</li>
-                      <li>• Устранение недостатков</li>
-                      <li>• Гарантия «КАРСО» на 1 год</li>
-                    </ul>
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -349,163 +409,133 @@ const Index = () => {
           {/* Кредитный калькулятор */}
           <TabsContent value="calculator">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Калькулятор */}
+              {/* Сводная таблица */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Icon name="Calculator" size={20} />
-                    <span>Кредитный калькулятор</span>
+                    <span>Сводная таблица параметров</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="calc-price">Стоимость автомобиля (руб)</Label>
-                      <Input
-                        id="calc-price"
-                        type="number"
-                        placeholder="Введите стоимость"
-                        value={clientData.carPrice || ''}
-                        onChange={(e) => {
-                          const price = Number(e.target.value);
-                          setClientData({...clientData, carPrice: price});
-                          calculateSovcom(price);
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="calc-limit">Кредитный лимит ВТБ (руб)</Label>
-                      <Input
-                        id="calc-limit"
-                        type="number"
-                        placeholder="Введите лимит"
-                        value={clientData.creditLimit || ''}
-                        onChange={(e) => {
-                          const limit = Number(e.target.value);
-                          setClientData({...clientData, creditLimit: limit});
-                          calculateVTB(limit);
-                        }}
-                      />
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-3">
-                      <h4 className="font-semibold">Автоматические расчеты:</h4>
-                      
-                      <div className="bg-slate-50 p-3 rounded-lg">
-                        <h5 className="font-medium text-sm mb-2">Совкомбанк Business Finance:</h5>
-                        <div className="text-sm space-y-1">
-                          <div className="flex justify-between">
-                            <span>Стоимость авто:</span>
-                            <span>{sovcomData.carPrice.toLocaleString()} руб</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>+ Страховки:</span>
-                            <span>1 061 950 руб</span>
-                          </div>
-                          <div className="flex justify-between font-semibold">
-                            <span>Итого к кредиту:</span>
-                            <span>{sovcomData.totalCredit.toLocaleString()} руб</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 p-3 rounded-lg">
-                        <h5 className="font-medium text-sm mb-2">ВТБ Добросовестный заемщик:</h5>
-                        <div className="text-sm space-y-1">
-                          <div className="flex justify-between">
-                            <span>Кредитный лимит:</span>
-                            <span>{vtbData.creditLimit.toLocaleString()} руб</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>+ Страхование жизни:</span>
-                            <span>62 250 руб</span>
-                          </div>
-                          <div className="flex justify-between font-semibold">
-                            <span>Итого к кредиту:</span>
-                            <span>{vtbData.totalCredit.toLocaleString()} руб</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Параметр</th>
+                          <th className="text-center p-2">Совкомбанк</th>
+                          <th className="text-center p-2">ВТБ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="space-y-1">
+                        <tr className="border-b">
+                          <td className="p-2 font-medium">Процентная ставка</td>
+                          <td className="p-2 text-center">{sovcomData.interestRate}%</td>
+                          <td className="p-2 text-center">{vtbData.interestRate}%</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 font-medium">Срок кредита</td>
+                          <td className="p-2 text-center">{sovcomData.creditTerm} мес</td>
+                          <td className="p-2 text-center">{vtbData.creditTerm} мес</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 font-medium">Первоначальный взнос</td>
+                          <td className="p-2 text-center">{sovcomData.downPayment.toLocaleString()}</td>
+                          <td className="p-2 text-center">{vtbData.downPayment.toLocaleString()}</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 font-medium">Стоимость/Лимит</td>
+                          <td className="p-2 text-center">{sovcomData.carPrice.toLocaleString()}</td>
+                          <td className="p-2 text-center">{vtbData.creditLimit.toLocaleString()}</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 font-medium">Страхование жизни</td>
+                          <td className="p-2 text-center">{sovcomData.lifeInsurance.toLocaleString()}</td>
+                          <td className="p-2 text-center">{vtbData.lifeInsurance.toLocaleString()}</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 font-medium">КАСКО</td>
+                          <td className="p-2 text-center">{sovcomData.kasko.toLocaleString()}</td>
+                          <td className="p-2 text-center">{vtbData.kasko.toLocaleString()}</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 font-medium">Карта помощи РАТ</td>
+                          <td className="p-2 text-center">{sovcomData.helpCard.toLocaleString()}</td>
+                          <td className="p-2 text-center">{vtbData.helpCard.toLocaleString()}</td>
+                        </tr>
+                        <tr className="border-b bg-slate-50">
+                          <td className="p-2 font-bold">Сумма кредита</td>
+                          <td className="p-2 text-center font-bold">{sovcomData.totalCredit.toLocaleString()}</td>
+                          <td className="p-2 text-center font-bold">{vtbData.totalCredit.toLocaleString()}</td>
+                        </tr>
+                        <tr className="border-b bg-blue-50">
+                          <td className="p-2 font-bold">Ежемесячный платеж</td>
+                          <td className="p-2 text-center font-bold text-blue-700">{sovcomData.monthlyPayment.toLocaleString()}</td>
+                          <td className="p-2 text-center font-bold text-blue-700">{vtbData.monthlyPayment.toLocaleString()}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Результаты */}
+              {/* Результаты и рекомендации */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Icon name="BarChart3" size={20} />
-                    <span>Результаты расчетов</span>
+                    <span>Анализ и рекомендации</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Совкомбанк результат */}
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold">Совкомбанк</h4>
-                        <Badge className="bg-primary">10,25%</Badge>
+                <CardContent className="space-y-4">
+                  {/* Переплата */}
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3">Переплата по кредиту:</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Совкомбанк:</span>
+                        <span className="font-medium">
+                          {((sovcomData.monthlyPayment * sovcomData.creditTerm) - sovcomData.totalCredit).toLocaleString()} руб
+                        </span>
                       </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Сумма кредита:</span>
-                          <span className="font-semibold">{sovcomData.totalCredit.toLocaleString()} руб</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Ежемесячный платеж:</span>
-                          <span className="font-semibold">{sovcomData.monthlyPayment.toLocaleString()} руб</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Срок:</span>
-                          <span>60 месяцев</span>
-                        </div>
-                        <div className="flex justify-between text-red-600">
-                          <span>Досрочное погашение:</span>
-                          <span>❌ Запрещено 48 мес</span>
-                        </div>
+                      <div className="flex justify-between">
+                        <span>ВТБ:</span>
+                        <span className="font-medium">
+                          {((vtbData.monthlyPayment * vtbData.creditTerm) - vtbData.totalCredit).toLocaleString()} руб
+                        </span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* ВТБ результат */}
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold">ВТБ</h4>
-                        <Badge className="bg-secondary">11,65%</Badge>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Сумма кредита:</span>
-                          <span className="font-semibold">{vtbData.totalCredit.toLocaleString()} руб</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Ежемесячный платеж:</span>
-                          <span className="font-semibold">{vtbData.monthlyPayment.toLocaleString()} руб</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Срок:</span>
-                          <span>до 98 месяцев</span>
-                        </div>
-                        <div className="flex justify-between text-green-600">
-                          <span>Досрочное погашение:</span>
-                          <span>✅ Разрешено</span>
-                        </div>
-                      </div>
+                  {/* Экономия */}
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h4 className="font-semibold text-green-800 mb-2">Выгода:</h4>
+                    <p className="text-sm text-green-700">
+                      {sovcomData.monthlyPayment > 0 && vtbData.monthlyPayment > 0 ? (
+                        sovcomData.monthlyPayment < vtbData.monthlyPayment ? 
+                        `Совкомбанк выгоднее на ${(vtbData.monthlyPayment - sovcomData.monthlyPayment).toLocaleString()} руб/мес` :
+                        `ВТБ выгоднее на ${(sovcomData.monthlyPayment - vtbData.monthlyPayment).toLocaleString()} руб/мес`
+                      ) : "Введите данные для сравнения"}
+                    </p>
+                  </div>
+
+                  {/* Особенности */}
+                  <div className="space-y-3">
+                    <div className="border rounded-lg p-3">
+                      <h5 className="font-medium text-sm mb-2">Совкомбанк:</h5>
+                      <ul className="text-xs text-slate-600 space-y-1">
+                        <li>• Б/У автомобили банка</li>
+                        <li>• Обязательные страховки</li>
+                        <li>• Мораторий 48 месяцев</li>
+                      </ul>
                     </div>
-
-                    {/* Рекомендация */}
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <h4 className="font-semibold text-blue-900 mb-2">Рекомендация системы:</h4>
-                      <p className="text-sm text-blue-800">
-                        {vtbData.totalCredit > 0 && sovcomData.totalCredit > 0 ? (
-                          vtbData.totalCredit < sovcomData.totalCredit ? 
-                          "ВТБ предлагает более выгодные условия по сумме кредита" :
-                          "Совкомбанк может быть выгоднее по процентной ставке, но с обязательными страховками"
-                        ) : "Введите данные для сравнения программ"}
-                      </p>
+                    <div className="border rounded-lg p-3">
+                      <h5 className="font-medium text-sm mb-2">ВТБ:</h5>
+                      <ul className="text-xs text-slate-600 space-y-1">
+                        <li>• Дилерские автомобили</li>
+                        <li>• Подарки от автосалона</li>
+                        <li>• Досрочное погашение</li>
+                      </ul>
                     </div>
                   </div>
                 </CardContent>
@@ -519,7 +549,7 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Icon name="BarChart3" size={20} />
-                  <span>Сравнение банковских программ</span>
+                  <span>Подробное сравнение программ</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -530,38 +560,51 @@ const Index = () => {
                         <th className="border border-slate-300 p-3 text-left">Параметр</th>
                         <th className="border border-slate-300 p-3 text-center">Совкомбанк</th>
                         <th className="border border-slate-300 p-3 text-center">ВТБ</th>
+                        <th className="border border-slate-300 p-3 text-center">Разница</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
                         <td className="border border-slate-300 p-3 font-medium">Процентная ставка</td>
-                        <td className="border border-slate-300 p-3 text-center">10,25%</td>
-                        <td className="border border-slate-300 p-3 text-center">17,75% → 11,65%</td>
+                        <td className="border border-slate-300 p-3 text-center">{sovcomData.interestRate}%</td>
+                        <td className="border border-slate-300 p-3 text-center">{vtbData.interestRate}%</td>
+                        <td className="border border-slate-300 p-3 text-center">
+                          {(vtbData.interestRate - sovcomData.interestRate).toFixed(2)}%
+                        </td>
                       </tr>
                       <tr className="bg-slate-50">
-                        <td className="border border-slate-300 p-3 font-medium">Срок кредита</td>
-                        <td className="border border-slate-300 p-3 text-center">60 месяцев</td>
-                        <td className="border border-slate-300 p-3 text-center">до 98 месяцев</td>
+                        <td className="border border-slate-300 p-3 font-medium">Ежемесячный платеж</td>
+                        <td className="border border-slate-300 p-3 text-center font-bold">{sovcomData.monthlyPayment.toLocaleString()} руб</td>
+                        <td className="border border-slate-300 p-3 text-center font-bold">{vtbData.monthlyPayment.toLocaleString()} руб</td>
+                        <td className="border border-slate-300 p-3 text-center font-bold">
+                          {(vtbData.monthlyPayment - sovcomData.monthlyPayment).toLocaleString()} руб
+                        </td>
                       </tr>
                       <tr>
-                        <td className="border border-slate-300 p-3 font-medium">Страхование жизни</td>
-                        <td className="border border-slate-300 p-3 text-center">301 250 руб (обязательно)</td>
-                        <td className="border border-slate-300 p-3 text-center">62 250 руб (добровольно)</td>
+                        <td className="border border-slate-300 p-3 font-medium">Общая переплата</td>
+                        <td className="border border-slate-300 p-3 text-center">
+                          {((sovcomData.monthlyPayment * sovcomData.creditTerm) - sovcomData.totalCredit).toLocaleString()} руб
+                        </td>
+                        <td className="border border-slate-300 p-3 text-center">
+                          {((vtbData.monthlyPayment * vtbData.creditTerm) - vtbData.totalCredit).toLocaleString()} руб
+                        </td>
+                        <td className="border border-slate-300 p-3 text-center">
+                          {(((vtbData.monthlyPayment * vtbData.creditTerm) - vtbData.totalCredit) - 
+                            ((sovcomData.monthlyPayment * sovcomData.creditTerm) - sovcomData.totalCredit)).toLocaleString()} руб
+                        </td>
                       </tr>
                       <tr className="bg-slate-50">
-                        <td className="border border-slate-300 p-3 font-medium">КАСКО</td>
-                        <td className="border border-slate-300 p-3 text-center">473 250 руб</td>
-                        <td className="border border-slate-300 p-3 text-center">0 руб</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-300 p-3 font-medium">Досрочное погашение</td>
-                        <td className="border border-slate-300 p-3 text-center">❌ 48 месяцев</td>
-                        <td className="border border-slate-300 p-3 text-center">✅ Доступно</td>
-                      </tr>
-                      <tr className="bg-slate-50">
-                        <td className="border border-slate-300 p-3 font-medium">Сумма кредита</td>
-                        <td className="border border-slate-300 p-3 text-center font-bold">{sovcomData.totalCredit.toLocaleString()} руб</td>
-                        <td className="border border-slate-300 p-3 text-center font-bold">{vtbData.totalCredit.toLocaleString()} руб</td>
+                        <td className="border border-slate-300 p-3 font-medium">Общие страховки</td>
+                        <td className="border border-slate-300 p-3 text-center">
+                          {(sovcomData.lifeInsurance + sovcomData.kasko + sovcomData.helpCard).toLocaleString()} руб
+                        </td>
+                        <td className="border border-slate-300 p-3 text-center">
+                          {(vtbData.lifeInsurance + vtbData.kasko + vtbData.helpCard).toLocaleString()} руб
+                        </td>
+                        <td className="border border-slate-300 p-3 text-center">
+                          {((vtbData.lifeInsurance + vtbData.kasko + vtbData.helpCard) - 
+                            (sovcomData.lifeInsurance + sovcomData.kasko + sovcomData.helpCard)).toLocaleString()} руб
+                        </td>
                       </tr>
                     </tbody>
                   </table>
