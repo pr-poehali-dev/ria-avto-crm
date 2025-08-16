@@ -43,6 +43,24 @@ const Index = () => {
     totalCredit: 0
   });
 
+  const [dealerCarData, setDealerCarData] = useState({
+    carModel: '',
+    carYear: '',
+    carPrice: 0,
+    dealerName: '',
+    isNew: true,
+    vtbSyncData: {
+      interestRate: 11.65,
+      creditTerm: 98,
+      downPayment: 0,
+      lifeInsurance: 62250,
+      kasko: 0,
+      helpCard: 0,
+      monthlyPayment: 0,
+      totalCredit: 0
+    }
+  });
+
   // Автоматический расчет для Совкомбанка
   const calculateSovcom = (data: typeof sovcomData) => {
     const totalInsurance = data.lifeInsurance + data.kasko + data.helpCard;
@@ -83,6 +101,21 @@ const Index = () => {
   const updateVTBField = (field: string, value: number) => {
     const newData = { ...vtbData, [field]: value };
     setVtbData(calculateVTB(newData));
+  };
+
+  // Расчет для дилерского автомобиля (синхронизирован с ВТБ)
+  const calculateDealerCar = (carPrice: number) => {
+    const syncData = {
+      ...dealerCarData.vtbSyncData,
+      creditLimit: carPrice
+    };
+    const calculatedData = calculateVTB(syncData);
+    
+    setDealerCarData({
+      ...dealerCarData,
+      carPrice: carPrice,
+      vtbSyncData: calculatedData
+    });
   };
 
   return (
@@ -277,6 +310,19 @@ const Index = () => {
                       Мораторий на досрочное погашение — 48 месяцев
                     </p>
                   </div>
+
+                  {/* Пояснения программы Совкомбанк */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-semibold text-sm text-blue-900 mb-2">
+                      <Icon name="Info" size={16} className="inline mr-1" />
+                      Пояснения программы Business Finance:
+                    </h4>
+                    <p className="text-xs text-blue-800 leading-relaxed">
+                      Банк партнер реализует свои Б/У автомобили через разные автосалоны только в кредит, 
+                      занижая рыночную стоимость автомобиля и предоставляя свои кредитные условия, без возможности пересмотра. 
+                      Сторонний банк не может аккредитовать автомобили Совкомбанка.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -399,6 +445,22 @@ const Index = () => {
                     <p className="text-xs text-green-800">
                       <Icon name="CheckCircle" size={14} className="inline mr-1" />
                       Досрочное погашение доступно без штрафов
+                    </p>
+                  </div>
+
+                  {/* Пояснения программы ВТБ */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-semibold text-sm text-blue-900 mb-2">
+                      <Icon name="Info" size={16} className="inline mr-1" />
+                      Пояснения программы "Добросовестный заемщик":
+                    </h4>
+                    <p className="text-xs text-blue-800 leading-relaxed mb-2">
+                      Предложение льготного автокредита от ПАО ВТБ Банка (кредитует только дилерские автомобили). 
+                      Расчет сделан на одобренный кредитный лимит клиенту на покупку нового автомобиля или авто с пробегом.
+                    </p>
+                    <p className="text-xs text-blue-800 leading-relaxed">
+                      Для точного расчета автомобиля нужно подгрузить данные по дилерскому автомобилю 
+                      в разделе "Дилерские авто".
                     </p>
                   </div>
                 </CardContent>
@@ -615,21 +677,186 @@ const Index = () => {
 
           {/* Дилерские автомобили */}
           <TabsContent value="dealer">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Icon name="Car" size={20} />
-                  <span>Расчет дилерских автомобилей</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Icon name="Car" size={48} className="mx-auto text-slate-400 mb-4" />
-                  <p className="text-slate-600">Специальный раздел для расчета дилерских автомобилей</p>
-                  <p className="text-sm text-slate-400 mt-2">Интеграция с программой ВТБ "Добросовестный заемщик"</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Данные дилерского автомобиля */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Icon name="Car" size={20} />
+                    <span>Дилерский автомобиль</span>
+                    <Badge className="bg-secondary">Синхронизировано с ВТБ</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="dealer-model">Модель автомобиля</Label>
+                      <Input
+                        id="dealer-model"
+                        placeholder="Например: Toyota Camry"
+                        value={dealerCarData.carModel}
+                        onChange={(e) => setDealerCarData({...dealerCarData, carModel: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dealer-year">Год выпуска</Label>
+                      <Input
+                        id="dealer-year"
+                        type="number"
+                        placeholder="2024"
+                        value={dealerCarData.carYear}
+                        onChange={(e) => setDealerCarData({...dealerCarData, carYear: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="dealer-price">Стоимость автомобиля (руб)</Label>
+                      <Input
+                        id="dealer-price"
+                        type="number"
+                        placeholder="0"
+                        value={dealerCarData.carPrice || ''}
+                        onChange={(e) => calculateDealerCar(Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dealer-name">Автосалон</Label>
+                      <Input
+                        id="dealer-name"
+                        placeholder="Название дилера"
+                        value={dealerCarData.dealerName}
+                        onChange={(e) => setDealerCarData({...dealerCarData, dealerName: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-4">
+                    <Label>Состояние автомобиля:</Label>
+                    <div className="flex space-x-4">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          checked={dealerCarData.isNew}
+                          onChange={() => setDealerCarData({...dealerCarData, isNew: true})}
+                        />
+                        <span>Новый</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          checked={!dealerCarData.isNew}
+                          onChange={() => setDealerCarData({...dealerCarData, isNew: false})}
+                        />
+                        <span>С пробегом</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-semibold text-sm text-blue-900 mb-2">
+                      Подарки от автосалона (при покупке в кредит ВТБ):
+                    </h4>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      <li>• Первое ТО в подарок</li>
+                      <li>• Диагностика автомобиля в подарок</li>
+                      <li>• Устранение недостатков</li>
+                      <li>• Гарантия «КАРСО» на 1 год</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Расчет кредита для дилерского авто */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Icon name="Calculator" size={20} />
+                    <span>Кредитный расчет</span>
+                    <Badge className="bg-secondary">ВТБ</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3">Параметры кредита (синхронизированы с ВТБ):</h4>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="flex justify-between">
+                        <span>Процентная ставка:</span>
+                        <span className="font-semibold">{dealerCarData.vtbSyncData.interestRate}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Срок кредита:</span>
+                        <span className="font-semibold">{dealerCarData.vtbSyncData.creditTerm} мес</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Стоимость авто:</span>
+                        <span className="font-semibold">{dealerCarData.carPrice.toLocaleString()} руб</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Первый взнос:</span>
+                        <span className="font-semibold">{dealerCarData.vtbSyncData.downPayment.toLocaleString()} руб</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-sm">Страховые продукты:</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Страхование жизни:</span>
+                        <span className="font-medium">{dealerCarData.vtbSyncData.lifeInsurance.toLocaleString()} руб</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>КАСКО:</span>
+                        <span className="font-medium">{dealerCarData.vtbSyncData.kasko.toLocaleString()} руб</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Карта помощи РАТ:</span>
+                        <span className="font-medium">{dealerCarData.vtbSyncData.helpCard.toLocaleString()} руб</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h4 className="font-semibold text-green-800 mb-3">Итоговый расчет:</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Сумма кредита:</span>
+                        <span className="font-bold text-lg">{dealerCarData.vtbSyncData.totalCredit.toLocaleString()} руб</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Ежемесячный платеж:</span>
+                        <span className="font-bold text-lg text-green-700">{dealerCarData.vtbSyncData.monthlyPayment.toLocaleString()} руб</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Переплата:</span>
+                        <span>{((dealerCarData.vtbSyncData.monthlyPayment * dealerCarData.vtbSyncData.creditTerm) - dealerCarData.vtbSyncData.totalCredit).toLocaleString()} руб</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <p className="text-xs text-blue-800">
+                      <Icon name="Sync" size={14} className="inline mr-1" />
+                      Данные автоматически синхронизируются с программой ВТБ "Добросовестный заемщик"
+                    </p>
+                  </div>
+
+                  <Button 
+                    className="w-full" 
+                    disabled={!dealerCarData.carModel || !dealerCarData.carPrice}
+                  >
+                    <Icon name="Download" size={16} className="mr-2" />
+                    Сформировать предложение
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
