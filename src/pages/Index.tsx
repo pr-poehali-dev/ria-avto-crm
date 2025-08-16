@@ -288,17 +288,17 @@ const Index = () => {
                         <span className="font-bold text-lg">{sovcomData.totalCredit.toLocaleString()} руб</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="font-semibold">Автоматический платеж:</span>
+                        <span className="font-semibold">Ежемесячный платеж:</span>
                         <span className="font-bold text-lg">{sovcomData.monthlyPayment.toLocaleString()} руб</span>
                       </div>
                     </div>
                     
                     <div>
-                      <Label htmlFor="sovcom-manual-payment">Ручная корректировка платежа (руб)</Label>
+                      <Label htmlFor="sovcom-payment">Ежемесячный платеж (руб)</Label>
                       <Input
-                        id="sovcom-manual-payment"
+                        id="sovcom-payment"
                         type="number"
-                        placeholder="Введите для корректировки"
+                        value={sovcomData.monthlyPayment || ''}
                         onChange={(e) => setSovcomData({...sovcomData, monthlyPayment: Number(e.target.value)})}
                       />
                     </div>
@@ -425,17 +425,17 @@ const Index = () => {
                         <span className="font-bold text-lg">{vtbData.totalCredit.toLocaleString()} руб</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="font-semibold">Автоматический платеж:</span>
+                        <span className="font-semibold">Ежемесячный платеж:</span>
                         <span className="font-bold text-lg">{vtbData.monthlyPayment.toLocaleString()} руб</span>
                       </div>
                     </div>
                     
                     <div>
-                      <Label htmlFor="vtb-manual-payment">Ручная корректировка платежа (руб)</Label>
+                      <Label htmlFor="vtb-payment">Ежемесячный платеж (руб)</Label>
                       <Input
-                        id="vtb-manual-payment"
+                        id="vtb-payment"
                         type="number"
-                        placeholder="Введите для корректировки"
+                        value={vtbData.monthlyPayment || ''}
                         onChange={(e) => setVtbData({...vtbData, monthlyPayment: Number(e.target.value)})}
                       />
                     </div>
